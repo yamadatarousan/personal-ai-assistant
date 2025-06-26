@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>範囲選択</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            cursor: crosshair;
+            user-select: none;
+            overflow: hidden;
+        }
+        
+        .selection-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .selection-box {
+            position: absolute;
+            border: 2px solid #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+            display: none;
+        }
+        
+        .instructions {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        📸 ドラッグして範囲を選択してください（ESCキーでキャンセル）
+    </div>
+    
+    <div class="selection-overlay" id="overlay">
+        <div class="selection-box" id="selectionBox"></div>
+    </div>
+    
+    <script>
+        let isSelecting = false;
+        let startX = 0;
+        let startY = 0;
+        let currentX = 0;
+        let currentY = 0;
+        
+        const overlay = document.getElementById('overlay');
+        const selectionBox = document.getElementById('selectionBox');
+        
+        // Start selection
+        overlay.addEventListener('mousedown', (e) => {
+            isSelecting = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            currentX = e.clientX;
+            currentY = e.clientY;
+            
+            selectionBox.style.display = 'block';
+            updateSelectionBox();
+        });
+        
+        // Update selection
+        overlay.addEventListener('mousemove', (e) => {
+            if (!isSelecting) return;
+            
+            currentX = e.clientX;
+            currentY = e.clientY;
+            updateSelectionBox();
+        });
+        
+        // Complete selection
+        overlay.addEventListener('mouseup', (e) => {
+            if (!isSelecting) return;
+            
+            isSelecting = false;
+            
+            const x = Math.min(startX, currentX);
+            const y = Math.min(startY, currentY);
+            const width = Math.abs(currentX - startX);
+            const height = Math.abs(currentY - startY);
+            
+            // Only proceed if selection has minimum size
+            if (width > 10 && height > 10) {
+                window.electronAPI.sendSelection({ x, y, width, height });
+            } else {
+                window.electronAPI.cancelSelection();
+            }
+        });
+        
+        // Cancel selection with ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                window.electronAPI.cancelSelection();
+            }
+        });
+        
+        function updateSelectionBox() {
+            const x = Math.min(startX, currentX);
+            const y = Math.min(startY, currentY);
+            const width = Math.abs(currentX - startX);
+            const height = Math.abs(currentY - startY);
+            
+            selectionBox.style.left = x + 'px';
+            selectionBox.style.top = y + 'px';
+            selectionBox.style.width = width + 'px';
+            selectionBox.style.height = height + 'px';
+        }
+    </script>
+</body>
+</html>
